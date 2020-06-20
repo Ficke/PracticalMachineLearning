@@ -1,7 +1,7 @@
 require(Hmisc)
 require(RColorBrewer)
-library(caret)
-library("dplyr") # or library("tidyverse")
+require(caret)
+require(dplyr) # or library("tidyverse")
 
 #Load data 
 require(AppliedPredictiveModeling)
