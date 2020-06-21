@@ -52,9 +52,10 @@ This paper will discuss the methods used for explotatory data analysis, feature 
 
 All data in this project is sourced from http://groupware.les.inf.puc-rio.br/har
 
-Creative Commons license (CC BY-SA)
-
 *Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.*
+
+*Creative Commons license (CC BY-SA)*
+
 
 ## EDA
 
@@ -90,10 +91,7 @@ knitr::kable(zs, align = "c")%>%
 ```
 
 
-Next we'll filter out the variables that don't make sense as predictors, such as the date. 
-
-
-```{r variable reduction 1, echo=TRUE}
+```{r variable reduction 1, include=FALSE}
 names(FilteredData[,1:10])
 
 FilteredData <- FilteredData[, -c(1, 3, 4, 5, 6)]
@@ -102,7 +100,6 @@ FilteredTest <- FilteredTest[-c(1, 3, 4, 5, 6)]
 
 
 Now we need to standardize the variables types. First we'll review what the types currently are for the training and test sets, then change them all to correspond with an appropriate type. 
-
 
 ```{r variable type, echo=FALSE}
 
@@ -122,12 +119,13 @@ FilteredTest[, 2:53] <-
   lapply(FilteredTest[, 2:53], as.numeric)
 FilteredTest[, c(1, 54)] <-
   lapply(FilteredTest[, c(1, 54)], as.factor)
+
+
 ```
 
-
+<br>
 
 Now that the data is clean, we'll split out our training set into a 70/30 train/test split. 
-
 
 
 ```{r training test split, echo=TRUE}
@@ -146,7 +144,7 @@ valid <- FilteredData[-trainIndex, ]
 
 Since these are classification problems where the interpretability of the model is less important than the accuracy, we'll try a couple of machine learning models: GBM and Random Forest. 
 
-These models have a tendancy to overfit, so we'll make sure to use cross-validation. 
+These models have a tendancy to overfit, so we'll make sure to use cross-validation. We're using the default values of 10 k-folds, and 10 repeats. 
 
 
 ### GBM
@@ -255,7 +253,7 @@ plot_confusion_matrix(conf_mat$`Confusion Matrix`[[1]])
 ```
 
 
-Both models are performing well, though the Random Forest has a slightly better accuracy of 99.4% vs. 96.2% for the GBM. 
+Both models are performing well, though the Random Forest has a slightly better accuracy of 99.4% vs. 96.2% for the GBM. I anticipate the out of sample error to be small, less than 1% for the Random Forest given the 95% CI and the >99% sensitivity and specificity values on a validation dataset. 
 
 
 ## Predictions

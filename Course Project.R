@@ -10,6 +10,9 @@ require(doParallel)
 require(cvms)
 require(rsvg)
 require(ggimage)
+require(corrplot)
+require(Hmisc)
+
 
 #read in data
 data <-
@@ -45,6 +48,17 @@ FilteredTest <- FilteredTest[-c(1, 3, 4, 5, 6)]
 str(FilteredData)
 str(FilteredTest)
 
+
+
+
+library(knitr)
+library(magrittr)
+data.frame(variable = names(FilteredData),
+           classe = sapply(FilteredData, typeof),
+           first_values = sapply(FilteredData, function(x) paste0(head(x),  collapse = ", ")),
+           row.names = NULL) %>% 
+  kable()
+
 #standardize data types
 FilteredData[, 2:53] <- 
   lapply(FilteredData[, 2:53], as.numeric)
@@ -71,6 +85,28 @@ valid <- FilteredData[-trainIndex, ]
 p <- ggplot(FilteredData, aes(x = kurtosis_roll_belt)) +
   geom_bar()
 p
+
+#correlation matrix & plot 
+cor_mat <- cor(train[,-c(1,54)])
+class(cor_mat)
+corrplot(cor_mat)
+
+corrplot(
+  cor_mat,
+  title = "Correlation Plot",
+  method = "square",
+  outline = T,
+  addgrid.col = "darkgray",
+  order = "hclust",
+  mar = c(4, 0, 4, 0),
+  addrect = 4,
+  rect.col = "black",
+  rect.lwd = 5,
+  cl.pos = "b",
+  tl.col = "indianred4",
+  tl.pos='n'
+)
+
 
 #find clusters of variables 
 
@@ -140,7 +176,7 @@ conf_mat <- confusion_matrix(targets = valid$classe,
 
 plot_confusion_matrix(conf_mat$`Confusion Matrix`[[1]])
 
-confusionMatrix(data = predictions.rf, reference = valid$classe)[2]
+confusionMatrix(data = predictions.rf, reference = valid$classe)
 
 evaluate()
 
