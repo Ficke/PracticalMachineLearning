@@ -12,6 +12,7 @@ knitr::opts_chunk$set(
 	message = FALSE,
 	warning = FALSE
 )
+
 require(caret)
 require(dplyr)
 require(gbm)
@@ -22,6 +23,9 @@ require(cvms)
 require(rsvg)
 require(ggimage)
 
+```
+
+```{r read in data, include=FALSE}
 #read in data
 data <-
   read.csv(
@@ -33,8 +37,6 @@ test <-
     "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",
     stringsAsFactors = FALSE
   )
-
-
 ```
 
 ## Problem Statement
@@ -55,16 +57,20 @@ First we'll examine the data for zero or near zero variance so that we can remov
 
 nzvList <- nearZeroVar(data, saveMetrics = TRUE)
 print(nzvList[1:10,])
+```
+
+```{r nzd1, include=FALSE}
 nzv <- nearZeroVar(data)
 
 FilteredData <- data[, -nzv]
 FilteredTest <- test[, -nzv]
+```
 
+```{r NAs, echo=TRUE}
 zeros <- colMeans(!is.na(FilteredData)) > .97
-print(summary(zeros))
-
 FilteredData <- FilteredData[zeros]
 FilteredTest <- FilteredTest[zeros]
+print(summary(zeros))
 
 ```
 
@@ -114,7 +120,6 @@ Since these are classification problems where the interpretability of the model 
 
 These models have a tendancy to overfit, so we'll make sure to use cross-validation. 
 
-GBM: 
 
 ```{r GBM, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 akePSOCKcluster(8)
@@ -138,14 +143,13 @@ gbmFit1 <- train(
 stopCluster(cl)
 ```
 
-```{r GBM Output, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```{r GBM display, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 
 summary(gbmFit1)
 varImp(gbmFit1)
 
 ```
 
-Random Forest: 
 
 ```{r RF, eval=FALSE, include=FALSE}
 cl <- makePSOCKcluster(8)
@@ -164,17 +168,17 @@ stopCluster(cl)
 registerDoSEQ()
 ```
 
+```{r GBM Output, echo=FALSE, message=FALSE, warning=FALSE}
+
+gbmFit<-readRDS(file = "GBM1.rds")
+varImp(gbmFit)
+```
+
 ```{r RF Output, echo=FALSE, message=FALSE, warning=FALSE}
 
 rfFit<-readRDS(file = "RF1.rds")
-
-summary(rfFit)
 varImp(rfFit)
 
-gbmFit<-readRDS(file = "GBM1.rds")
-
-summary(gbmFit)
-varImp(gbmFit)
 ```
 
 
@@ -187,9 +191,8 @@ predictions.gbm <- predict(gbmFit,valid,na.action = na.pass)
 conf.mat.gbm <- confusion_matrix(targets = valid$classe,
                              predictions = predictions.gbm)
 
+confusionMatrix(data = predictions.gbm, reference = valid$classe)
 plot_confusion_matrix(conf.mat.gbm$`Confusion Matrix`[[1]])
-
-conf.mat.gbm
 
 ```
 
@@ -199,9 +202,24 @@ predictions.rf <- predict(rfFit,valid,na.action = na.pass)
 conf_mat <- confusion_matrix(targets = valid$classe,
                              predictions = predictions.rf)
 
+confusionMatrix(data = predictions.rf, reference = valid$classe)
 plot_confusion_matrix(conf_mat$`Confusion Matrix`[[1]])
 
 ```
 
 
+## Predictions
 
+
+The last step is to use our models to predict on unknown quantities. Since both models seem to perform well, we'll run predictions using each and compare the results. 
+
+```{r Predictions, echo=TRUE}
+#predict on 20 data points 
+predictions.test <- predict(rfFit,test,na.action = na.pass)
+predictions.test
+
+predictions.test2 <- predict(gbmFit,test,na.action = na.pass)
+predictions.test2
+```
+
+All of the predictions agree, which gives more confidence in the results. 
