@@ -8,9 +8,9 @@ df_print: paged
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
+	echo = TRUE,
 	message = FALSE,
-	warning = FALSE,
-	include = FALSE
+	warning = FALSE
 )
 require(caret)
 require(dplyr)
