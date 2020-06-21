@@ -1259,7 +1259,7 @@ valid &lt;- FilteredData[-trainIndex, ]</code></pre>
 <p>These models have a tendancy to overfit, so we’ll make sure to use cross-validation. We’re using the default values of 10 k-folds, and 10 repeats.</p>
 <div id="gbm" class="section level3">
 <h3>GBM</h3>
-<pre class="r"><code>akePSOCKcluster(8)
+<pre class="r"><code>cl &lt;- makePSOCKcluster(8)
 registerDoParallel(cl)
 
 fitControl &lt;- trainControl(

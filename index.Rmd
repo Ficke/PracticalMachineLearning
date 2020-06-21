@@ -150,7 +150,7 @@ These models have a tendancy to overfit, so we'll make sure to use cross-validat
 ### GBM
 
 ```{r GBM, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
-akePSOCKcluster(8)
+cl <- makePSOCKcluster(8)
 registerDoParallel(cl)
 
 fitControl <- trainControl(
