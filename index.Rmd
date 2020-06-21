@@ -5,6 +5,7 @@ date: "6/20/2020"
 output: 
   html_document: 
     df_print: kable
+    toc: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -25,6 +26,7 @@ require(rsvg)
 require(ggimage)
 require(knitr)
 require(magrittr)
+require(kableExtra)
 
 ```
 
@@ -44,7 +46,9 @@ test <-
 
 ## Problem Statement
 
-This project aims to classify exercise technique using personal fitness device data. I'll discuss the methods used for explotatory data analysis, feature selection, model selection, and performance evaluation.
+This project aims to classify users' exercise technique using data from a personal fitness device. 
+
+This paper will discuss the methods used for explotatory data analysis, feature selection, model selection, and performance evaluation, and will ultimately show modeled results on an independent test dataset. 
 
 All data in this project is sourced from http://groupware.les.inf.puc-rio.br/har
 
@@ -52,14 +56,17 @@ Creative Commons license (CC BY-SA)
 
 *Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.*
 
-### EDA
+## EDA
 
-First we'll examine the data for zero or near zero variance so that we can remove them. 
+First we'll examine the data for zero or near zero variance so that we can remove them from our predictors.
 
-```{r clean data, echo=TRUE, message=TRUE, warning=FALSE}
+
+```{r clean data, echo=FALSE, message=FALSE, warning=FALSE}
 
 nzvList <- nearZeroVar(data, saveMetrics = TRUE)
-nzvList[1:10,]
+knitr::kable(nzvList[1:10,], align = "c")%>%
+  kable_styling(full_width = F)
+
 ```
 
 ```{r nzd1, include=FALSE}
@@ -69,15 +76,22 @@ FilteredData <- data[, -nzv]
 FilteredTest <- test[, -nzv]
 ```
 
+
+We'll also search for features that have mostly invalid data, and filter those out. 
+
+
 ```{r NAs, echo=TRUE}
 zeros <- colMeans(!is.na(FilteredData)) > .97
 FilteredData <- FilteredData[zeros]
 FilteredTest <- FilteredTest[zeros]
-as.table(summary(zeros))
+zs<-as.matrix(summary(zeros))
+knitr::kable(zs, align = "c")%>%
+  kable_styling(full_width = F)
 ```
 
 
 Next we'll filter out the variables that don't make sense as predictors, such as the date. 
+
 
 ```{r variable reduction 1, echo=TRUE}
 names(FilteredData[,1:10])
@@ -86,9 +100,11 @@ FilteredData <- FilteredData[, -c(1, 3, 4, 5, 6)]
 FilteredTest <- FilteredTest[-c(1, 3, 4, 5, 6)]
 ```
 
+
 Now we need to standardize the variables types. First we'll review what the types currently are for the training and test sets, then change them all to correspond with an appropriate type. 
 
-```{r variable type, echo=TRUE}
+
+```{r variable type, echo=FALSE}
 
 data.frame(variable = names(FilteredData),
            classe = sapply(FilteredData, typeof),
@@ -108,9 +124,13 @@ FilteredTest[, c(1, 54)] <-
   lapply(FilteredTest[, c(1, 54)], as.factor)
 ```
 
+
+
 Now that the data is clean, we'll split out our training set into a 70/30 train/test split. 
 
-```{r training test split, include=FALSE}
+
+
+```{r training test split, echo=TRUE}
 set.seed(250)
 trainIndex <- createDataPartition(FilteredData$classe, p = .7, 
                                   list = FALSE, 
@@ -129,7 +149,9 @@ Since these are classification problems where the interpretability of the model 
 These models have a tendancy to overfit, so we'll make sure to use cross-validation. 
 
 
-```{r GBM, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+### GBM
+
+```{r GBM, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
 akePSOCKcluster(8)
 registerDoParallel(cl)
 
@@ -151,6 +173,7 @@ gbmFit1 <- train(
 stopCluster(cl)
 ```
 
+
 ```{r GBM display, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 
 summary(gbmFit1)
@@ -158,8 +181,18 @@ varImp(gbmFit1)
 
 ```
 
+```{r GBM Output, echo=FALSE, message=FALSE, warning=FALSE}
 
-```{r RF, eval=FALSE, include=FALSE}
+gbmFit<-readRDS(file = "GBM1.rds")
+
+gbmImp<-varImp(gbmFit)
+plot(gbmImp, top = 20)
+```
+
+
+### Random Forest
+
+```{r RF, eval=FALSE, echo = TRUE}
 cl <- makePSOCKcluster(8)
 registerDoParallel(cl)
 
@@ -176,23 +209,26 @@ stopCluster(cl)
 registerDoSEQ()
 ```
 
-```{r GBM Output, echo=FALSE, message=FALSE, warning=FALSE}
 
-gbmFit<-readRDS(file = "GBM1.rds")
-varImp(gbmFit)
-```
 
 ```{r RF Output, echo=FALSE, message=FALSE, warning=FALSE}
 
 rfFit<-readRDS(file = "RF1.rds")
-varImp(rfFit)
+rfImp<-varImp(rfFit)
+plot(rfImp, top = 20)
 
 ```
 
 
 ## Performance
 
-```{r performance GBM, echo=TRUE}
+
+Now we'll look at the confusion matrix to assess the accuracy of each model. 
+
+
+### GBM Performance 
+
+```{r performance GBM, echo=FALSE}
 
 predictions.gbm <- predict(gbmFit,valid,na.action = na.pass)
 
@@ -204,7 +240,10 @@ plot_confusion_matrix(conf.mat.gbm$`Confusion Matrix`[[1]])
 
 ```
 
-```{r performance RF, echo=TRUE}
+
+### Random Forest Performance 
+
+```{r performance RF, echo=FALSE}
 predictions.rf <- predict(rfFit,valid,na.action = na.pass)
 
 conf_mat <- confusion_matrix(targets = valid$classe,
@@ -216,18 +255,26 @@ plot_confusion_matrix(conf_mat$`Confusion Matrix`[[1]])
 ```
 
 
+Both models are performing well, though the Random Forest has a slightly better accuracy of 99.4% vs. 96.2% for the GBM. 
+
+
 ## Predictions
 
 
-The last step is to use our models to predict on unknown quantities. Since both models seem to perform well, we'll run predictions using each and compare the results. 
+The last step is to use our models to predict on unknown quantities. Since both models seem to perform well, we'll run predictions using each and compare the results. In this case All of the predictions agree, which gives more confidence in the results. 
 
-```{r Predictions, echo=TRUE}
+
+```{r Predictions, echo=FALSE}
 #predict on 20 data points 
-predictions.test <- predict(rfFit,test,na.action = na.pass)
-predictions.test
+predictions.test.rf <- predict(rfFit,test,na.action = na.pass)
+predictions.test2.gbm <- predict(gbmFit,test,na.action = na.pass)
+pred<-data.frame(
+  ProblemID = seq(1:20),
+  GBM_Predictions = predictions.test2.gbm,
+  Random_Forest_Predictions = predictions.test.rf
+)
 
-predictions.test2 <- predict(gbmFit,test,na.action = na.pass)
-predictions.test2
+knitr::kable(pred, align = "c")%>%
+  kable_styling(full_width = F)
+
 ```
-
-All of the predictions agree, which gives more confidence in the results. 
