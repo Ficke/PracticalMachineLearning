@@ -3,6 +3,7 @@ title: "Practical Machine Learning Course Project"
 author: "Adam Ficke"
 date: "6/20/2020"
 output: html_document
+df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -17,6 +18,9 @@ require(gbm)
 require(ggplot2)
 require(hablar)
 require(doParallel)
+require(cvms)
+require(rsvg)
+require(ggimage)
 
 #read in data
 data <-
@@ -66,7 +70,7 @@ FilteredTest <- FilteredTest[zeros]
 
 Next we'll filter out the variables that don't make sense as predictors, such as the date. 
 
-```{r variable reduction 1, echo=TRUE, warning=FALSE}
+```{r variable reduction 1, echo=TRUE}
 names(FilteredData[,1:10])
 
 FilteredData <- FilteredData[, -c(1, 3, 4, 5, 6)]
@@ -75,7 +79,7 @@ FilteredTest <- FilteredTest[-c(1, 3, 4, 5, 6)]
 
 Now we need to standardize the variables types. First we'll review what the types currently are for the training and test sets, then change them all to correspond with an appropriate type. 
 
-```{r variable type}
+```{r variable type, echo=TRUE}
 str(FilteredData)
 str(FilteredTest)
 
@@ -112,10 +116,9 @@ These models have a tendancy to overfit, so we'll make sure to use cross-validat
 
 GBM: 
 
-```{r GBM, message=FALSE, warning=FALSE, include=FALSE}
+```{r GBM, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 akePSOCKcluster(8)
 registerDoParallel(cl)
-
 
 fitControl <- trainControl(
   method = "repeatedcv",
@@ -135,7 +138,7 @@ gbmFit1 <- train(
 stopCluster(cl)
 ```
 
-```{r GBM Output, echo=FALSE, message=FALSE, warning=FALSE}
+```{r GBM Output, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 
 summary(gbmFit1)
 varImp(gbmFit1)
@@ -144,7 +147,7 @@ varImp(gbmFit1)
 
 Random Forest: 
 
-```{r RF, include=FALSE}
+```{r RF, eval=FALSE, include=FALSE}
 cl <- makePSOCKcluster(8)
 registerDoParallel(cl)
 
@@ -162,11 +165,43 @@ registerDoSEQ()
 ```
 
 ```{r RF Output, echo=FALSE, message=FALSE, warning=FALSE}
-summary(rfFit1)
-varImp(rfFit1)
+
+rfFit<-readRDS(file = "RF1.rds")
+
+summary(rfFit)
+varImp(rfFit)
+
+gbmFit<-readRDS(file = "GBM1.rds")
+
+summary(gbmFit)
+varImp(gbmFit)
 ```
 
 
+## Performance
+
+```{r performance GBM, echo=TRUE}
+
+predictions.gbm <- predict(gbmFit,valid,na.action = na.pass)
+
+conf.mat.gbm <- confusion_matrix(targets = valid$classe,
+                             predictions = predictions.gbm)
+
+plot_confusion_matrix(conf.mat.gbm$`Confusion Matrix`[[1]])
+
+conf.mat.gbm
+
+```
+
+```{r performance RF, echo=TRUE}
+predictions.rf <- predict(rfFit,valid,na.action = na.pass)
+
+conf_mat <- confusion_matrix(targets = valid$classe,
+                             predictions = predictions.rf)
+
+plot_confusion_matrix(conf_mat$`Confusion Matrix`[[1]])
+
+```
 
 
 
